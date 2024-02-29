@@ -1,6 +1,7 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using System.Net;
 using System.Text.RegularExpressions;
+using CommandLine;
 using HtmlAgilityPack;
 using Serilog;
 
@@ -8,30 +9,38 @@ namespace LnCrawler
 {
   partial class Program
   {
+
+    public class Options
+    {
+      [Option('t', "title", Required = true, HelpText = "The title of the light novel")]
+      public required string Title { get; set; }
+
+      [Option('u', "src", Required = true, HelpText = "The url of the light novel index, it must contain urls pointing to all the chapters")]
+      public required string Source { get; set; }
+    }
+
     static void Main(string[] args)
     {
-      if (args.Length == 0)
-      {
-        Console.Error.WriteLine("Please provide the LN URL");
-        return;
-      }
-
-      var target = args[0];
 
       Log.Logger = new LoggerConfiguration().MinimumLevel.Information().WriteTo.Console().CreateLogger();
       Log.Logger.Information("Starting Crawler");
 
-      ParsePage(target);
+      Parser.Default.ParseArguments<Options>(args).WithParsed((options) =>
+      {
+        var result = ParsePage(options.Source);
+        WriteToFile(options.Title, "Chapter 1", result);
+      });
     }
 
-    private static void ParsePage(string targetUrl)
+    private static string ParsePage(string targetUrl)
     {
       var website = new HtmlWeb();
 
       try
       {
         var doc = website.Load(targetUrl);
-        doc.Load(WebUtility.HtmlDecode(doc.Text));
+
+        doc.LoadHtml(WebUtility.HtmlDecode(doc.Text));
 
         var chapterTitle = doc.DocumentNode.SelectSingleNode("//h1[@class=\"entry-title\"]").InnerText;
         var chapterBodyParagraphs = doc.DocumentNode.SelectSingleNode("//div[@class=\"entry-content\"]").SelectNodes("./p");
@@ -45,23 +54,20 @@ namespace LnCrawler
           result += cleanSection + '\n';
         }
 
-        WriteToFile(chapterTitle, result);
-
-        Log.Logger.Information("Success: {result}", new
-        {
-          url = targetUrl,
-          heading = chapterTitle,
-        });
-
+        return result;
       }
       catch (Exception error)
       {
         Log.Logger.Error("Could not load the provided URL, {reason}", error);
+        return "";
       }
     }
-    private static void WriteToFile(string chapterName, string contents)
+    private static void WriteToFile(string title, string chapterName, string contents)
     {
-      var fileName = $@"{chapterName}.txt";
+      var dir = Path.Combine(Environment.CurrentDirectory, title);
+      Directory.CreateDirectory(dir);
+
+      var fileName = Path.Combine(dir, $@"{chapterName}.txt");
 
       FileStream file = new(fileName, FileMode.Create);
 
