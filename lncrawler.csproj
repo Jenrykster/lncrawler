@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="Abot" Version="2.0.70" />
+    <PackageReference Include="CommandLineParser" Version="2.9.1" />
     <PackageReference Include="HtmlAgilityPack" Version="1.11.59" />
   </ItemGroup>
 
