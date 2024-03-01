@@ -1,6 +1,7 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using System.Net;
 using System.Text.RegularExpressions;
+using AngleSharp.Dom;
 using CommandLine;
 using HtmlAgilityPack;
 using Serilog;
@@ -19,6 +20,12 @@ namespace LnCrawler
       public required string Source { get; set; }
     }
 
+    class Chapter(string name, string url)
+    {
+      readonly public string url = url;
+      readonly public string name = name;
+    }
+
     static void Main(string[] args)
     {
 
@@ -27,9 +34,24 @@ namespace LnCrawler
 
       Parser.Default.ParseArguments<Options>(args).WithParsed((options) =>
       {
-        var result = ParsePage(options.Source);
-        WriteToFile(options.Title, "Chapter 1", result);
+        Log.Logger.Information("Finding chapters...");
+        var chapters = GetChaptersByIndex(options.Source);
+        Log.Logger.Information($"{chapters.Count} chapters found!");
       });
+    }
+
+    static List<Chapter> GetChaptersByIndex(string indexPageUrl)
+    {
+      var xPathQuery = "//*[@class='entry-content']//a[contains(text(), 'Chapter')]";
+
+      var webLoader = new HtmlWeb();
+      var indexPage = webLoader.Load(indexPageUrl);
+
+      indexPage.LoadHtml(WebUtility.HtmlDecode(indexPage.Text));
+
+      var chapterNodes = indexPage.DocumentNode.SelectNodes(xPathQuery);
+
+      return chapterNodes.Select((node) => new Chapter(node.InnerText, node.GetAttributeValue("href", ""))).ToList();
     }
 
     private static string ParsePage(string targetUrl)
