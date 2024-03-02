@@ -7,6 +7,9 @@ I used [this](https://silenttranslations.com/that-time-i-got-reincarnated-into-g
 Also I'm using this project to learn the basics of C# so don't feel offended by the code quality.
 
 ## Tasks
-- [ ] Grab all of the chapters/volumes based on an index page.
-- [ ] Parse all of the chapters.
+- [X] Grab all of the chapters/volumes based on an index page.
+- [X] Parse all of the chapters.
 - [ ] Compile everything into an epub per volume.
+
+## Future Ideas
+- [ ] Allow setting a cover image, author and other kinds of metada via a config file
