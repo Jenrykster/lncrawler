@@ -1,16 +1,15 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using System.Net;
 using System.Text.RegularExpressions;
-using AngleSharp.Dom;
 using CommandLine;
 using HtmlAgilityPack;
+using QuickEPUB;
 using Serilog;
 
 namespace LnCrawler
 {
   partial class Program
   {
-
     public class Options
     {
       [Option('t', "title", Required = true, HelpText = "The title of the light novel")]
@@ -38,15 +37,19 @@ namespace LnCrawler
         var chapters = GetChaptersByIndex(options.Source);
         Log.Logger.Information($"{chapters.Count} chapters found!");
 
+        var epubFile = new Epub(options.Title, "Some LN Author");
         if (chapters.Count > 0)
         {
           foreach (var chapter in chapters)
           {
             Log.Logger.Information("Parsing the contents of: {chapter}", chapter.name);
             var chapterContents = ParsePage(chapter.url);
-            WriteToFile(options.Title, chapter.name, chapterContents);
+
+            epubFile.AddSection(chapter.name, chapterContents);
           }
-          Log.Logger.Information("Success! Chapters saved to {path}", Path.Combine(Environment.CurrentDirectory, options.Title));
+
+          SaveEpub(options.Title, epubFile);
+          Log.Logger.Information("Success! Epub file saved to {path}", Path.Combine(Environment.CurrentDirectory, $"{options.Title}.epub"));
         }
       });
     }
@@ -75,14 +78,16 @@ namespace LnCrawler
 
         doc.LoadHtml(WebUtility.HtmlDecode(doc.Text));
 
-        var chapterTitle = doc.DocumentNode.SelectSingleNode("//h1[@class=\"entry-title\"]").InnerText;
+        var chapterTitle = doc.DocumentNode.SelectSingleNode("//h1[@class=\"entry-title\"]");
         var chapterBodyParagraphs = doc.DocumentNode.SelectSingleNode("//div[@class=\"entry-content\"]").SelectNodes("./p");
 
         var result = "";
 
+        result += chapterTitle.OuterHtml;
+
         foreach (HtmlNode node in chapterBodyParagraphs.Take(chapterBodyParagraphs.Count - 1))
         {
-          var cleanSection = WhiteSpaceRegexs().Replace(node.InnerText.Trim(), " ");
+          var cleanSection = WhiteSpaceRegexs().Replace(node.OuterHtml.Trim(), " ");
 
           result += cleanSection + '\n';
         }
@@ -95,17 +100,16 @@ namespace LnCrawler
         return "";
       }
     }
-    private static void WriteToFile(string title, string chapterName, string contents)
+    private static void SaveEpub(string title, Epub file)
     {
-      var dir = Path.Combine(Environment.CurrentDirectory, title);
+      var dir = Environment.CurrentDirectory;
       Directory.CreateDirectory(dir);
 
-      var fileName = Path.Combine(dir, $@"{chapterName}.txt");
+      var fileName = Path.Combine(dir, $@"{title}.epub");
 
-      FileStream file = new(fileName, FileMode.Create);
+      FileStream fileStream = new(fileName, FileMode.Create);
 
-      using StreamWriter outputFile = new(file);
-      outputFile.WriteLine(contents);
+      file.Export(fileStream);
     }
 
     [GeneratedRegex(@"\s+")]
