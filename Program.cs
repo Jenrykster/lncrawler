@@ -37,6 +37,17 @@ namespace LnCrawler
         Log.Logger.Information("Finding chapters...");
         var chapters = GetChaptersByIndex(options.Source);
         Log.Logger.Information($"{chapters.Count} chapters found!");
+
+        if (chapters.Count > 0)
+        {
+          foreach (var chapter in chapters)
+          {
+            Log.Logger.Information("Parsing the contents of: {chapter}", chapter.name);
+            var chapterContents = ParsePage(chapter.url);
+            WriteToFile(options.Title, chapter.name, chapterContents);
+          }
+          Log.Logger.Information("Success! Chapters saved to {path}", Path.Combine(Environment.CurrentDirectory, options.Title));
+        }
       });
     }
 
