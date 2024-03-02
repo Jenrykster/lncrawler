@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "dev": {
+      "commandName": "Project",
+      "commandLineArgs": "-t ExcelGames -u https://silenttranslations.com/that-time-i-got-reincarnated-into-google-spreadsheets/"
+    }
+  }
+}
